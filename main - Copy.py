@@ -1,11 +1,14 @@
+import pickle
+import time
+import pandas as pd
+import json
+from openpyxl import load_workbook
+from copy import copy
+from timeconversion import convert
+
 def main():
 
-    import pickle
-    import time
-    import pandas as pd
-    import json
-    from openpyxl import load_workbook
-    from copy import copy
+
     #Lines 4~197 for input
 
     #Read information to calculate from this file:
@@ -27,9 +30,6 @@ def main():
     swmaTimes = LocateTimes(swma)
     pemaTimes = LocateTimes(pema)
 
-    #returns the index of times
-    print(swmaTimes)
-
     #Get numeric characters
     def integerExtractor(var):
         integers = []
@@ -47,7 +47,7 @@ def main():
         output = ''.join(inttemp)
         integer = int(output)
         return integer
-        
+    '''
     #Add colon for xx:xx if it is needed
     def colonorNot(data):
         temp=[]
@@ -62,7 +62,7 @@ def main():
         else:
             return
         return output
-        
+     '''   
     #Detect whether the time is am or pm based off user input 
     def appendampm(x):
         if x is None:
@@ -74,7 +74,7 @@ def main():
         else:
             return None, x
         return y, str(x)
-            
+    '''       
     #Add zeros for time computation(1200, 1300, etc.)
     def zeros(data):
         print(f'{data}, {len(data)}, {type(data)}')
@@ -92,6 +92,7 @@ def main():
             return data
         else:
             return(int(data))
+    '''
     #Converts string into money format
     def money(string):
         if string[len(string)-2]=='.':
@@ -137,32 +138,32 @@ def main():
         for vehicleType in vehicleTypes:
             RateArr.append(RateDict[vehicleType])
 
+        timeStart, intStart = convert(dat, position, mod=0)
+        timeEnd, intEnd = convert(dat, position, mod=1200)
 
 
-        #Convert values:
+
+        '''#Convert values:
         #xx00
         intStart = integerExtractor(Start)
         #xx00
         intEnd = integerExtractor(End)
-        #xx00
+        #xx00'''
         intRates = []
         for Rate in RateArr:
             intRates.append(float(Rate))
-        #convert the start time into a computable number
+        '''#convert the start time into a computable number and convert to xx:xx
         intStart = zeros(str(intStart))
-        #convert the start time into xx:xx
         timeStart = colonorNot(str(intStart))
-
-
-        #Calculate amt of time
         intEnd = zeros(str(intEnd))
-        timeEnd = colonorNot(str(intEnd))
+        timeEnd = colonorNot(str(intEnd))'''
 
         Hours = 0
 
         #June 6th 23 - fixed 12 AM errors
 
-        def ManageAM(time, ampm, mod):
+
+        '''def ManageAM(time, ampm, mod):
             if time == 1200 and ampm == 'am':
                 time=0+mod
             elif ampm=='pm' and time<1200:
@@ -171,18 +172,13 @@ def main():
             return time
 
         intStart = ManageAM(intStart, ampm[0], 0)
-        intEnd = ManageAM(intEnd, ampm[1], 1200)
+        intEnd = ManageAM(intEnd, ampm[1], 1200)'''
 
         #intEnd is 2400 if 12 AM
         #Timing works on military time except for 12 AM
 
-
         if intEnd!=intStart:
             while intStart!=intEnd and Hours<24:
-                #print(intStart)
-                #print(intEnd)
-                #print(f'Hour {Hours}')
-                #time.sleep(1)
                 Hours+=1
                 intStart+=100
 
