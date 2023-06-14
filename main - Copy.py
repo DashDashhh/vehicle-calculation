@@ -1,11 +1,16 @@
+#Testing Script
+
+import pickle
+import time
+import pandas as pd
+import json
+from openpyxl import load_workbook
+from copy import copy
+from timeconversion import convert
+
 def main():
 
-    import pickle
-    import time
-    import pandas as pd
-    import json
-    from openpyxl import load_workbook
-    from copy import copy
+
     #Lines 4~197 for input
 
     #Read information to calculate from this file:
@@ -27,9 +32,6 @@ def main():
     swmaTimes = LocateTimes(swma)
     pemaTimes = LocateTimes(pema)
 
-    #returns the index of times
-    print(swmaTimes)
-
     #Get numeric characters
     def integerExtractor(var):
         integers = []
@@ -47,7 +49,7 @@ def main():
         output = ''.join(inttemp)
         integer = int(output)
         return integer
-        
+    '''
     #Add colon for xx:xx if it is needed
     def colonorNot(data):
         temp=[]
@@ -62,7 +64,7 @@ def main():
         else:
             return
         return output
-        
+     '''   
     #Detect whether the time is am or pm based off user input 
     def appendampm(x):
         if x is None:
@@ -74,7 +76,7 @@ def main():
         else:
             return None, x
         return y, str(x)
-            
+    '''       
     #Add zeros for time computation(1200, 1300, etc.)
     def zeros(data):
         print(f'{data}, {len(data)}, {type(data)}')
@@ -92,6 +94,7 @@ def main():
             return data
         else:
             return(int(data))
+    '''
     #Converts string into money format
     def money(string):
         if string[len(string)-2]=='.':
@@ -99,16 +102,11 @@ def main():
         return f'${string}'
     
     #Fetching event date and time data
-    def getData(dat):
-        EventName = str(dat.iloc[5][1])
-        EventLocation = str(dat.iloc[6][1])
-        EventDate = str(dat.iloc[8][1])
-        EventTime = str(dat.iloc[8][4])
+    def getData(position, dat):
+        EventDate = str(dat.iloc[position][2])
+        EventTime = str(dat.iloc[position][5])
 
-
-        return EventDate, EventTime, EventLocation, EventName
-
-    Date, Time, Location, Name = getData(pema)
+        return EventDate, EventTime
 
     #Calculate all values
     def calculate(position, dat, c):
@@ -142,67 +140,49 @@ def main():
         for vehicleType in vehicleTypes:
             RateArr.append(RateDict[vehicleType])
 
+        timeStart, intStart = convert(dat, position, mod=0)
+        timeEnd, intEnd = convert(dat, position, mod=1200)
 
 
-        #Convert values:
+
+        '''#Convert values:
         #xx00
         intStart = integerExtractor(Start)
         #xx00
         intEnd = integerExtractor(End)
-        #xx00
+        #xx00'''
         intRates = []
         for Rate in RateArr:
             intRates.append(float(Rate))
-        #convert the start time into a computable number
+        '''#convert the start time into a computable number and convert to xx:xx
         intStart = zeros(str(intStart))
-        #convert the start time into xx:xx
         timeStart = colonorNot(str(intStart))
-
-
-        #Calculate amt of time
         intEnd = zeros(str(intEnd))
-        timeEnd = colonorNot(str(intEnd))
+        timeEnd = colonorNot(str(intEnd))'''
 
         Hours = 0
 
         #June 6th 23 - fixed 12 AM errors
 
-        def ManageAM(time, ampm, mod):
-            #checks if we're in the 12th hour and resets to either 2400, 0000, or 0030
-            if str(time)[0:2] == '12' and ampm == 'am':
+
+        '''def ManageAM(time, ampm, mod):
+            if time == 1200 and ampm == 'am':
                 time=0+mod
-            #adds 1200 if we're after 12 pm
             elif ampm=='pm' and time<1200:
                 time+=1200
 
             return time
 
-
-        #stuff in place of the "mod" parameter is used if we start with "12" as the hour
-        #have to figure out how many minute after 12 in order to create a modifier so that we can make it 0030 for instance
-        intStart = ManageAM(intStart, ampm[0], int(str(intStart)[len(str(intStart))-2:]))
-        intEnd = ManageAM(intEnd, ampm[1], 2400)
-
-        print(intStart)
-        print(intEnd)
+        intStart = ManageAM(intStart, ampm[0], 0)
+        intEnd = ManageAM(intEnd, ampm[1], 1200)'''
 
         #intEnd is 2400 if 12 AM
         #Timing works on military time except for 12 AM
 
-
         if intEnd!=intStart:
             while intStart!=intEnd and Hours<24:
-                '''print(intStart)
-                print(intEnd)
-                print(f'Hour {Hours}')
-                time.sleep(1)'''
-                #adding half an hour for every 30 minute increment and going to the next hour once we hit 60
-                Hours+=0.5
-                intStart+=30
-                if str(intStart)[len(str(intStart))-2:]=='60':
-                    intStart+=40
-
-
+                Hours+=1
+                intStart+=100
 
         #Dictionary template to fill 
         dictionaryArr = []
@@ -213,32 +193,32 @@ def main():
             totDrivers = round(numDrivers*float(RateDict['Motor Vehicle Operator(s)'])*Hours, 3)
             totEnforcementOfficers = round(numEnforcementOfficers*float(RateDict['Parking Enforcement Officers(s)'])*Hours, 3)
             VehicleDict = {
-                "Description": f"{numVehicles[i]} {vehicleTypes[i]}, each for {str(Hours)} hours",
+                "Description": f"{numVehicles[i]} {vehicleTypes[i]}, each for {Hours} hours",
                 "Service Hours": f"{timeStart} {ampm[0]} - {timeEnd} {ampm[1]}",
-                "Total Hours": f"{str(Hours*numVehicles[i])} hours",
+                "Total Hours": f"{Hours*numVehicles[i]} hours",
                 "Hourly Rate": f"{money(str(round(intRates[i], 3)))}",
                 "Total Amount": f"{money(str(totVehicles))}"
             }
 
             dictionaryArr.append(VehicleDict)
         DriverDict = {
-            "Description": f"{numDrivers} driver(s), each for {str(Hours)} hours",
+            "Description": f"{numDrivers} driver(s), each for {Hours} hours",
             "Service Hours": f"{timeStart} {ampm[0]} - {timeEnd} {ampm[1]}",
-            "Total Hours": f"{str(Hours*numDrivers)} hours",
+            "Total Hours": f"{Hours*numDrivers} hours",
             "Hourly Rate": f"{money(str(round(float(RateDict['Motor Vehicle Operator(s)']), 3)))}",
             "Total Amount": f"{money(str(totDrivers))} "
         }
         SupervisorDict = {
-            "Description": f"{numSupervisors} supervisor(s) for {str(Hours)} hours",
+            "Description": f"{numSupervisors} supervisor(s) for {Hours} hours",
             "Service Hours": f"{timeStart} {ampm[0]} - {timeEnd} {ampm[1]}",
-            "Total Hours": f"{str(Hours*numSupervisors)} hours",
+            "Total Hours": f"{Hours*numSupervisors} hours",
             "Hourly Rate": f"{money(str(round(float(RateDict['Supervisor(s)'])*numSupervisors, 3)))}",
             "Total Amount": f"{money(str(totSupervisors))} "
         }
         EnforcementOfficersDict = {
-            "Description": f"{numEnforcementOfficers} enforcement officer(s) for {str(Hours)} hours",
+            "Description": f"{numEnforcementOfficers} enforcement officer(s) for {Hours} hours",
             "Service Hours": f"{timeStart} {ampm[0]} - {timeEnd} {ampm[1]}",
-            "Total Hours": f"{str(Hours*numEnforcementOfficers)} hours",
+            "Total Hours": f"{Hours*numEnforcementOfficers} hours",
             "Hourly Rate": f"{money(str(round(float(RateDict['Parking Enforcement Officers(s)'])*numEnforcementOfficers, 3)))}",
             "Total Amount": f"{money(str(totEnforcementOfficers))} "
         }
@@ -336,6 +316,13 @@ def main():
     path = pd.read_excel('writeto.xlsx')   
     path = pd.DataFrame(path)
 
+    #Always returns an error
+    try:
+        path.iloc[7][5] = getData(8, swma)[0]
+    except Exception as e: 
+        print(str(e))
+        time.sleep(10)
+
         
     for i in range(19,93):  
 
@@ -400,10 +387,6 @@ def main():
 
     #write new data from df information
     def write_new_data(worksheet_dst, data):
-        #Date is reference when the getData function is called
-        #The date in the output is placed at row 9 column 5
-        worksheet_dst.cell(row=9, column=5, value=f'Date: {Date}')
-
         for i in range(19, 95):
             worksheet_dst.cell(row=i, column=1, value=data.iloc[i-2][0])
             worksheet_dst.cell(row=i, column=2, value=data.iloc[i-2][1])
